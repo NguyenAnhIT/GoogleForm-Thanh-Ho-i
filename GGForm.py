@@ -24,6 +24,8 @@ class UI(QMainWindow):
         self.pushButton_2.clicked.connect(self.diaLogExcelFile)
         self.label_2 = self.findChild(QLabel,'label_2')
         self.spinBox = self.findChild(QSpinBox,'spinBox')
+        self.checkBox = self.findChild(QCheckBox,'checkBox')
+        self.label_3 = self.findChild(QLabel,'label_3')
         self.threadHandel = {}
         self.show()
 
@@ -32,6 +34,8 @@ class UI(QMainWindow):
             self.threadHandel[i] = HandelThread(i)
             self.threadHandel[i].excelFiles = self.fileName
             self.threadHandel[i].labelSucess.connect(self.labelSucess)
+            self.threadHandel[i].labelStatus.connect(self.labelStatus)
+            self.threadHandel[i].checkBox = self.checkBox
             self.threadHandel[i].start()
     def diaLogExcelFile(self):
         try:
@@ -41,9 +45,11 @@ class UI(QMainWindow):
             pass
     def labelSucess(self,index):
         self.label_2.setText(f'Thành Công: {index}')
-
+    def labelStatus(self,text):
+        self.label_3.setText(f'Trạng Thái: {text}')
 class HandelThread(QThread):
     labelSucess = pyqtSignal(str)
+    labelStatus = pyqtSignal(str)
     def __init__(self,index = 0):
         super(HandelThread,self).__init__()
         self.index = index
@@ -54,11 +60,13 @@ class HandelThread(QThread):
         opts = uc.ChromeOptions()
         opts.add_argument(f"--window-position={self.index * 200},0")
         opts.add_argument("--window-size=800,880")
+        self.labelStatus.emit('Khởi tạo trình duyệt !')
         args = ["hide_console", ]
         opts.add_argument(f'--user-data-dir=Profile {self.temp}')
         opts.add_argument("--disable-popup-blocking")
         opts.add_argument("--disable-gpu")
-        opts.headless = True
+        if self.checkBox.isChecked():
+            opts.headless = True
         self.browser = uc.Chrome(executable_path=os.getcwd()+'/chromedriver',options=opts)
         with self.browser:self.browser.get('https://gmail.com')
     def handel(self):
@@ -76,6 +84,7 @@ class HandelThread(QThread):
             # Send Email text
             self.browser.find_element_by_xpath('//*[@id="identifierId"]').send_keys(email)
             sleep(1)
+            self.labelStatus.emit('Đang sử lý đăng nhập gmail !')
             # Try Except Click Next .
             try:
                 self.browser.find_element_by_xpath('//*[@id="identifierNext"]/div/button').click()
@@ -104,6 +113,7 @@ class HandelThread(QThread):
                     self.browser.get(
                         'https://docs.google.com/forms/d/e/1FAIpQLSdnOuji6opZn7wSoErzkSfsbE21iu-hUnsM0DisaY7DniYRBQ/viewform')
                 sleep(1)
+                self.labelStatus.emit('Đang sử lý điền form !')
                 # Clear Form
                 self.browser.execute_script("""document.querySelectorAll('span[class="l4V7wb Fxmcue"]')[1].click()""")
                 sleep(2)
@@ -149,6 +159,7 @@ class HandelThread(QThread):
                 global _countSucess
                 _countSucess += 1
                 self.labelSucess.emit(f'{_countSucess}')
+                self.labelStatus.emit('Điền form thành công !')
                 sleep(3)
             except:pass
         self.closeBrowser()
