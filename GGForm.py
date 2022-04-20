@@ -1,3 +1,4 @@
+import shutil
 import tempfile
 
 from PyQt6.QtWidgets import *
@@ -115,7 +116,7 @@ class HandelThread(QThread):
                 file_errors_location = self.excelFiles
                 xlsxData = pd.read_excel(file_errors_location)
                 loop = xlsxData.shape[0]
-                if _countExcel >= loop:break
+                if _countExcel >= int(loop):break
                 dataExcel = xlsxData.iloc[_countExcel]
                 _countExcel += 1
                 # Send Key
@@ -150,8 +151,16 @@ class HandelThread(QThread):
                 self.labelSucess.emit(f'{_countSucess}')
                 sleep(3)
             except:pass
+        self.closeBrowser()
 
-        sleep(5000)
+    def closeBrowser(self):
+        if self.browser:
+            self.browser.close()
+            self.browser.quit()
+            try:
+                shutil.rmtree(r'{}'.format(self.temp))
+            except:
+                pass
 
     def waitBrowser(self,browser, options=None, options1=None, options2=None, options3=None, options4=None,
                     options5=None,
